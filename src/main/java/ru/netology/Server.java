@@ -1,5 +1,6 @@
 package ru.netology;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -50,5 +51,17 @@ public class Server {
             var paths = handlers.get(method);
             paths.put(path, handler);
         }
+    }
+
+    public boolean doHandler(Request request, BufferedOutputStream out) {
+        if (handlers.containsKey(request.getMethod())) {
+            var handlersToDo = handlers.get(request.getMethod());
+            if (handlersToDo.containsKey(request.getPath())) {
+                var handler = handlersToDo.get(request.getPath());
+                handler.handle(request, out);
+                return true;
+            }
+        }
+        return false;
     }
 }

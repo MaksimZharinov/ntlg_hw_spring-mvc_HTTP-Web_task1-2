@@ -16,42 +16,6 @@ public class Request {
         this.body = body;
     }
 
-//    public void parsingRequestLine(String requestLine) throws IOException {
-//
-//        final var filePath = Path.of(".", "public", path);
-//        final var mimeType = Files.probeContentType(filePath);
-//
-//
-//
-//        if (path.equals("/classic.html")) {
-//            final var template = Files.readString(filePath);
-//            final var content = template.replace(
-//                    "{time}",
-//                    LocalDateTime.now().toString()
-//            ).getBytes();
-//            out.write((
-//                    "HTTP/1.1 200 OK\r\n" +
-//                            "Content-Type: " + mimeType + "\r\n" +
-//                            "Content-Length: " + content.length + "\r\n" +
-//                            "Connection: close\r\n" +
-//                            "\r\n"
-//            ).getBytes());
-//            out.write(content);
-//            out.flush();
-//        }
-//
-//        final var length = Files.size(filePath);
-//        out.write((
-//                "HTTP/1.1 200 OK\r\n" +
-//                        "Content-Type: " + mimeType + "\r\n" +
-//                        "Content-Length: " + length + "\r\n" +
-//                        "Connection: close\r\n" +
-//                        "\r\n"
-//        ).getBytes());
-//        Files.copy(filePath, out);
-//        out.flush();
-//    }
-
     public String getMethod() {
         return method;
     }
