@@ -1,15 +1,15 @@
 package ru.netology;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
@@ -19,94 +19,79 @@ public class Main {
             "/spring.svg", "/spring.png", "/resources.html", "/styles.css",
             "/app.js", "/links.html", "/forms.html", "/classic.html",
             "/events.html", "/events.js");
-    final static List<String> validMethods = List.of("GET", "POST",
-            "PUT", "DELETE");
+    public static final String GET = "GET";
+    public static final String POST = "POST";
     final static String notFound404 =
             "HTTP/1.1 404 Not Found\r\n" +
                     "Content-Length: 0\r\n" +
                     "Connection: close\r\n" +
                     "\r\n";
 
-    private static boolean checkRequest(Request request,
-                                        BufferedOutputStream responseStream) {
-        try {
-            if (!validMethods.contains(request.getMethod()) ||
-                    !validPaths.contains(request.getPath())) {
-                responseStream.write(notFound404.getBytes());
-                responseStream.flush();
-                return false;
-            }
-        } catch (IOException e) {
-            System.err.println(e);
-        }
-        return true;
-    }
-
-    private static void err(BufferedOutputStream out) throws IOException {
-        out.write(notFound404.getBytes());
-        out.flush();
-    }
-
     public static void main(String[] args) {
 
+        final var validMethods = List.of(GET, POST);
         final var connections = Executors.newFixedThreadPool(64);
         final var clients = new ConcurrentHashMap<Integer, Socket>();
 
         final var server = new Server();
 
-        server.addHandler("GET", "/messages", (request, responseStream) -> {
+        server.addHandler("GET", "/messages",
+                (request, responseStream) -> {
 
-            try {
+                    try {
 
-                final var filePath = Path.of(".", "public", request.getPath());
-                final var mimeType = Files.probeContentType(filePath);
+                        final var filePath =
+                                Path.of(".", "public", request.getPath());
+                        final var mimeType =
+                                Files.probeContentType(filePath);
 
-                if (request.getPath().equals("/classic.html")) {
-                    final var template = Files.readString(filePath);
-                    final var content = template.replace(
-                            "{time}",
-                            LocalDateTime.now().toString()
-                    ).getBytes();
-                    responseStream.write((
-                            "HTTP/1.1 200 OK\r\n" +
-                                    "Content-Type: " + mimeType + "\r\n" +
-                                    "Content-Length: " + content.length + "\r\n" +
-                                    "Connection: close\r\n" +
-                                    "\r\n"
-                    ).getBytes());
-                    responseStream.write(content);
-                    responseStream.flush();
-                }
+                        if (request.getPath().equals("/classic.html")) {
+                            final var template = Files.readString(filePath);
+                            final var content = template.replace(
+                                    "{time}",
+                                    LocalDateTime.now().toString()
+                            ).getBytes();
+                            responseStream.write((
+                                    "HTTP/1.1 200 OK\r\n" +
+                                            "Content-Type: " + mimeType + "\r\n" +
+                                            "Content-Length: " + content.length + "\r\n" +
+                                            "Connection: close\r\n" +
+                                            "\r\n"
+                            ).getBytes());
+                            responseStream.write(content);
+                            responseStream.flush();
+                        }
 
-                final var length = Files.size(filePath);
-                responseStream.write((
-                        "HTTP/1.1 200 OK\r\n" +
-                                "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length: " + length + "\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                Files.copy(filePath, responseStream);
-                responseStream.flush();
-            } catch (Exception e) {
-                System.err.println(e);
-            }
-        });
+                        final var length = Files.size(filePath);
+                        responseStream.write((
+                                "HTTP/1.1 200 OK\r\n" +
+                                        "Content-Type: " + mimeType + "\r\n" +
+                                        "Content-Length: " + length + "\r\n" +
+                                        "Connection: close\r\n" +
+                                        "\r\n"
+                        ).getBytes());
+                        Files.copy(filePath, responseStream);
+                        responseStream.flush();
+                    } catch (Exception e) {
+                        System.err.println(e);
+                    }
+                });
 
-        server.addHandler("POST", "/messages", (request, responseStream) -> {
+        server.addHandler("POST", "/messages",
+                (request, responseStream) -> {
 
-            try {
+                    try {
 
-                if (!checkRequest(request, responseStream)) return;
+                        final var filePath =
+                                Path.of(".", "public", request.getPath());
+                        final var mimeType =
+                                Files.probeContentType(filePath);
 
-                final var filePath = Path.of(".", "public", request.getPath());
-                final var mimeType = Files.probeContentType(filePath);
 
-
-            } catch (Exception e) {
-                System.err.println(e);
-            }
-        });
+                    } catch (Exception e) {
+                        System.err.println(e);
+                    }
+                });
 
         server.start(9999);
         System.out.println("Server is up.");
@@ -116,61 +101,93 @@ public class Main {
                 final var client = server.connect();
                 new Thread(() -> {
                     clients.put(client.getPort(), client);
-                    try (var in = new BufferedReader(
-                            new InputStreamReader(
-                                    client.getInputStream()));
+                    try (var in = new BufferedInputStream(
+                            client.getInputStream());
                          var out = new BufferedOutputStream(
                                  client.getOutputStream())) {
 
                         while (true) {
 
-                            List<String> lines = new ArrayList<>();
-                            String line;
-                            while ((line = in.readLine()) != null) {
-                                lines.add(line);
-                            }
+                            final var limit = 4096;
 
-                            final var requestLine = lines.getFirst();
-                            final var parts = requestLine.split(" ");
+                            in.mark(limit);
+                            final var buffer = new byte[limit];
+                            final var read = in.read(buffer);
 
-                            if (parts.length != 3) {
+                            final var requestLineDelimiter = new byte[]{'\r', '\n'};
+                            final var requestLineEnd =
+                                    indexOf(buffer, requestLineDelimiter, 0, read);
+                            if (requestLineEnd == -1) {
                                 err(out);
                                 continue;
                             }
 
-                            String method = parts[0];
+                            final var requestLine =
+                                    new String(Arrays.copyOf(buffer, requestLineEnd))
+                                            .split(" ");
+                            if (requestLine.length != 3) {
+                                err(out);
+                                continue;
+                            }
+
+                            final var method = requestLine[0];
                             if (!validMethods.contains(method)) {
                                 err(out);
                                 continue;
                             }
 
-                            String path = parts[1];
-                            if (!validPaths.contains(path)) {
+                            final var path = requestLine[1];
+                            if (!path.startsWith("/")) {
                                 err(out);
                                 continue;
                             }
 
-                            List<String> headers = new ArrayList<>();
-                            for (int i = 2; i < lines.size() &&
-                                    !lines.get(i).isEmpty(); i++) {
-                                headers.add(lines.get(i));
+                            final var headersDelimiter =
+                                    new byte[]{'\r', '\n', '\r', '\n'};
+                            final var headersStart =
+                                    requestLineEnd + requestLineDelimiter.length;
+                            final var headersEnd =
+                                    indexOf(buffer, headersDelimiter,
+                                            headersStart, read);
+                            if (headersEnd == -1) {
+                                err(out);
+                                continue;
                             }
 
-                            StringBuilder bodyBuilder = new StringBuilder();
-                            if (lines.get(headers.size()).isEmpty()) {
-                                for (int i = headers.size() + 1; i < lines.size(); i++) {
-                                    bodyBuilder.append(lines.get(i));
+                            in.reset();
+                            in.skip(headersStart);
+
+                            final var headersBytes =
+                                    in.readNBytes(headersEnd - headersStart);
+                            final var headers = Arrays.asList(new String(headersBytes)
+                                    .split("\r\n"));
+
+                            String body = null;
+
+                            if (!method.equals(GET)) {
+                                in.skip(headersDelimiter.length);
+                                final var contentLength =
+                                        extractHeader(headers, "Content-Length");
+                                if (contentLength.isPresent()) {
+                                    final var length =
+                                            Integer.parseInt(contentLength.get());
+                                    final var bodyBytes =
+                                            in.readNBytes(length);
+
+                                    body = new String(bodyBytes);
                                 }
                             }
 
-                            String body = bodyBuilder.toString();
+                            final var request = new Request(method, path,
+                                    headers, body);
 
-                            Request request = new Request(method, path, headers, body);
-                            checkRequest(request, out);
-
-                            if (!server.doHandler(request, out)) {
-                                err(out);
-                            }
+//                            out.write((
+//                                    "HTTP/1.1 200 OK\r\n" +
+//                                            "Content-Length: 0\r\n" +
+//                                            "Connection: close\r\n" +
+//                                            "\r\n"
+//                            ).getBytes());
+//                            out.flush();
 
                         }
                     } catch (IOException e) {
@@ -179,5 +196,31 @@ public class Main {
                 }).start();
             });
         }
+    }
+
+    private static void err(BufferedOutputStream out) throws IOException {
+        out.write(notFound404.getBytes());
+        out.flush();
+    }
+
+    private static int indexOf(byte[] array, byte[] target, int start, int max) {
+        outer:
+        for (int i = start; i < max - target.length + 1; i++) {
+            for (int j = 0; j < target.length; j++) {
+                if (array[i + j] != target[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
+    private static Optional<String> extractHeader(List<String> headers, String header) {
+        return headers.stream()
+                .filter(o -> o.startsWith(header))
+                .map(o -> o.substring(o.indexOf(" ")))
+                .map(String::trim)
+                .findFirst();
     }
 }
