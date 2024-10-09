@@ -54,10 +54,13 @@ public class Server {
     }
 
     public boolean doHandler(Request request, BufferedOutputStream out) {
+        var fullPath = request.getPath();
+        var indexOfQuery = fullPath.indexOf('?');
+        var cutPath = fullPath.substring(0, indexOfQuery);
         if (handlers.containsKey(request.getMethod())) {
             var handlersToDo = handlers.get(request.getMethod());
-            if (handlersToDo.containsKey(request.getPath())) {
-                var handler = handlersToDo.get(request.getPath());
+            if (handlersToDo.containsKey(cutPath)) {
+                var handler = handlersToDo.get(cutPath);
                 handler.handle(request, out);
                 return true;
             }
