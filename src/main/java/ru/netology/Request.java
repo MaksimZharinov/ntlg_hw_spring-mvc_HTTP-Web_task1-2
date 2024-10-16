@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -90,6 +91,23 @@ public class Request implements RequestContext {
 
     public List<FileItem> getParts() {
         return parts;
+    }
+
+    public byte[] getPart(String name) {
+        Iterator<FileItem> iterator = parts.iterator();
+        while (iterator.hasNext()) {
+            FileItem part = iterator.next();
+            if (part.isFormField()) {
+                if (name.equals(part.getFieldName())) {
+                    return part.getString().getBytes();
+                }
+            } else {
+                if (name.equals(part.getName())) {
+                    return part.get();
+                }
+            }
+        }
+        return null;
     }
 
     @Override
