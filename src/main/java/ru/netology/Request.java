@@ -2,16 +2,20 @@ package ru.netology;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.RequestContext;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
-import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class Request {
+public class Request implements RequestContext {
 
     private final String method;
     private final String path;
@@ -22,7 +26,7 @@ public class Request {
     private final List<FileItem> parts;
 
     public Request(String method, String path,
-                   List<String> headers, String body) {
+                   List<String> headers, String body) throws FileUploadException {
         this.method = method;
         this.path = path;
         this.headers = headers;
@@ -37,14 +41,12 @@ public class Request {
             postParams = null;
         }
         if (contentType.contains("multipart/form-data")) {
-            var upload = new ServletFileUpload();
-            try {
-                parts = upload.parseRequest(new ByteArrayInputStream(
-                                body.getBytes(StandardCharsets.UTF_8)),
-                        headers);
-            } catch (FileUploadException ex) {
-                System.err.println(ex);
-            }
+            var factory = new DiskFileItemFactory();
+            factory.setSizeThreshold(100);
+            factory.setRepository(new File("temp"));
+            var upload = new ServletFileUpload(factory);
+            parts = upload.parseRequest(this);
+
         } else {
             parts = null;
         }
@@ -88,5 +90,29 @@ public class Request {
 
     public List<FileItem> getParts() {
         return parts;
+    }
+
+    @Override
+    public String getCharacterEncoding() {
+        //  stub
+        return "";
+    }
+
+    @Override
+    public String getContentType() {
+        //  stub
+        return "";
+    }
+
+    @Override
+    public int getContentLength() {
+        //  stub
+        return 0;
+    }
+
+    @Override
+    public InputStream getInputStream() throws IOException {
+        //  stub
+        return null;
     }
 }
