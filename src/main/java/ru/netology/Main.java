@@ -1,5 +1,7 @@
 package ru.netology;
 
+import org.apache.commons.fileupload.FileUploadException;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -190,7 +192,7 @@ public class Main {
 //                            out.flush();
 
                         }
-                    } catch (IOException e) {
+                    } catch (IOException | FileUploadException e) {
                         System.err.println(e);
                     }
                 }).start();
